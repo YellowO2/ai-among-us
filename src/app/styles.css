@@ -16,31 +16,31 @@
 }
 
 .pixel-button {
-  background-color: #645862;
+  background-color: #333333;
   color: white;
   border: 0;
   box-shadow: 
-    inset -4px -4px 0 0 #3e3546,
-    inset 4px 4px 0 0 #7c738a;
-  text-shadow: 2px 2px #3e3546;
+    inset -4px -4px 0 0 #000000,
+    inset 4px 4px 0 0 #666666;
+  text-shadow: 2px 2px #000000;
   font-family: 'PixelFont', sans-serif;
   transition: all 0.1s;
   image-rendering: pixelated;
 }
 
 .pixel-button:hover {
-  background-color: #7c738a;
+  background-color: #666666;
 }
 
 .pixel-button:active {
   box-shadow: 
-    inset 4px 4px 0 0 #3e3546,
-    inset -4px -4px 0 0 #7c738a;
+    inset 4px 4px 0 0 #000000,
+    inset -4px -4px 0 0 #666666;
   transform: translateY(2px);
 }
 
 .pixel-card {
-  background-color: #3e3546;
+  background-color: #111111;
   padding: 8px;
   border: 4px solid transparent;
   border-image-source: url('/images/pixel-card-border.png');
@@ -57,14 +57,14 @@
 }
 
 .pixel-bg {
-  background-color: #2d2335;
+  background-color: #000000;
   background-image: url('/images/pixel-bg.png');
   background-repeat: repeat;
   image-rendering: pixelated;
 }
 
 .pixel-input {
-  background-color: #3e3546;
+  background-color: #222222;
   border: 4px solid transparent;
   border-image-source: url('/images/pixel-input-border.png');
   border-image-slice: 4;

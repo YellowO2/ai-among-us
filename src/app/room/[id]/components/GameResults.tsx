@@ -111,7 +111,7 @@ export default function GameResults({
       <div className="text-center">
         <button
           onClick={onPlayAgain}
-          className="px-6 py-3 bg-purple-700 hover:bg-purple-600 rounded-lg font-medium text-lg transition-colors"
+          className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium text-lg transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
         >
           Play Again
         </button>

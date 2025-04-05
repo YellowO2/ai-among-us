@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Find the Fake Human",
+  title: "AI Among Us",
   description:
     "A multiplayer deduction game where you try to find the AI bot among real players",
 };
