@@ -8,7 +8,6 @@ import {
   query,
   where,
   getDocs,
-  arrayUnion,
 } from "firebase/firestore";
 import { Room, Player, Question } from "../types/game";
 
@@ -187,7 +186,7 @@ export const startGame = async (roomId: string): Promise<Room | null> => {
   // Select first question
   room.currentQuestion = await getRandomQuestion();
 
-  await updateDoc(roomRef, room);
+  await updateDoc(roomRef, { ...room });
   return room;
 };
 
@@ -242,7 +241,7 @@ export const submitAnswer = async (
     room.roundStartTime = Date.now();
   }
 
-  await updateDoc(roomRef, room);
+  await updateDoc(roomRef, { ...room });
   return true;
 };
 
@@ -290,7 +289,7 @@ export const submitVote = async (
     }
   }
 
-  await updateDoc(roomRef, room);
+  await updateDoc(roomRef, { ...room });
   return true;
 };
 
@@ -400,7 +399,7 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
     room.currentQuestion = await getRandomQuestion();
   }
 
-  await updateDoc(roomRef, room);
+  await updateDoc(roomRef, { ...room });
   return room;
 };
 

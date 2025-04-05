@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Room, Player, GameStatus } from "@/types/game";
+import { Room, Player } from "@/types/game";
 import {
   startGame,
   submitAnswer,

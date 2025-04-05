@@ -82,7 +82,8 @@ export default function VotingPhase({
       <div className="bg-blue-900/30 p-4 rounded-lg mb-6">
         <p className="font-medium">Vote for who you think is the AI!</p>
         <p className="text-sm text-gray-300 mt-1">
-          Read everyone's answers carefully. You can vote for up to 2 players.
+          Read everyone&apos;s answers carefully. You can vote for up to 2
+          players.
         </p>
       </div>
 
