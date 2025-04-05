@@ -1,0 +1,93 @@
+@font-face {
+  font-family: 'PixelFont';
+  src: url('/fonts/pixel.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.pixel-border {
+  border-image-source: url('/images/pixel-border.png');
+  border-image-slice: 4;
+  border-image-repeat: stretch;
+  border-image-width: 4px;
+  border-width: 4px;
+  border-style: solid;
+}
+
+.pixel-button {
+  background-color: #645862;
+  color: white;
+  border: 0;
+  box-shadow: 
+    inset -4px -4px 0 0 #3e3546,
+    inset 4px 4px 0 0 #7c738a;
+  text-shadow: 2px 2px #3e3546;
+  font-family: 'PixelFont', sans-serif;
+  transition: all 0.1s;
+  image-rendering: pixelated;
+}
+
+.pixel-button:hover {
+  background-color: #7c738a;
+}
+
+.pixel-button:active {
+  box-shadow: 
+    inset 4px 4px 0 0 #3e3546,
+    inset -4px -4px 0 0 #7c738a;
+  transform: translateY(2px);
+}
+
+.pixel-card {
+  background-color: #3e3546;
+  padding: 8px;
+  border: 4px solid transparent;
+  border-image-source: url('/images/pixel-card-border.png');
+  border-image-slice: 4;
+  border-image-repeat: stretch;
+  border-image-width: 4px;
+  image-rendering: pixelated;
+}
+
+.pixel-text {
+  font-family: 'PixelFont', sans-serif;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+.pixel-bg {
+  background-color: #2d2335;
+  background-image: url('/images/pixel-bg.png');
+  background-repeat: repeat;
+  image-rendering: pixelated;
+}
+
+.pixel-input {
+  background-color: #3e3546;
+  border: 4px solid transparent;
+  border-image-source: url('/images/pixel-input-border.png');
+  border-image-slice: 4;
+  border-image-repeat: stretch;
+  border-image-width: 4px;
+  color: white;
+  padding: 4px 8px;
+  font-family: 'PixelFont', sans-serif;
+}
+
+.pixel-input:focus {
+  outline: none;
+  border-image-source: url('/images/pixel-input-focus.png');
+}
+
+/* Animation for text typing effect */
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+.typing-animation {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typing 2s steps(40, end);
+}
