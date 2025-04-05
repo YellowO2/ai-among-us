@@ -305,6 +305,9 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
 
   const room = roomSnapshot.data() as Room;
 
+  // Add a result message for the round
+  room.roundResult = "";
+
   // Have AI players cast their votes if they haven't already
   room.players
     .filter((p) => p.isAI && !p.eliminated && p.votes.length < 2)
@@ -342,19 +345,38 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
       }
     });
 
-  // Find the player(s) with the most votes
-  const maxVotes = Math.max(...room.players.map((p) => p.votesReceived));
-  const eliminated = room.players.filter(
-    (p) => p.votesReceived === maxVotes && !p.eliminated
+  // Find the player with the most votes (handle ties by selecting first one)
+  const nonEliminatedPlayers = room.players.filter((p) => !p.eliminated);
+  const maxVotes = Math.max(
+    ...nonEliminatedPlayers.map((p) => p.votesReceived)
   );
 
-  // Mark eliminated players
-  eliminated.forEach((player) => {
-    const idx = room.players.findIndex((p) => p.id === player.id);
-    if (idx !== -1) {
-      room.players[idx].eliminated = true;
+  // Only proceed if at least one vote was cast
+  if (maxVotes > 0) {
+    // Get all players with the highest votes
+    const playersWithMaxVotes = nonEliminatedPlayers.filter(
+      (p) => p.votesReceived === maxVotes
+    );
+
+    // Select first player with max votes (tiebreaker)
+    const selectedPlayer = playersWithMaxVotes[0];
+
+    if (selectedPlayer) {
+      if (selectedPlayer.isAI) {
+        // If AI, eliminate them
+        const idx = room.players.findIndex((p) => p.id === selectedPlayer.id);
+        if (idx !== -1) {
+          room.players[idx].eliminated = true;
+          room.roundResult = `${selectedPlayer.alias} was eliminated! They were an AI bot.`;
+        }
+      } else {
+        // If human, don't eliminate them
+        room.roundResult = `${selectedPlayer.alias} received the most votes but was human! No one was eliminated.`;
+      }
     }
-  });
+  } else {
+    room.roundResult = "No votes were cast. No one was eliminated.";
+  }
 
   // Check if all AI players have been eliminated
   const allAIEliminated = room.players

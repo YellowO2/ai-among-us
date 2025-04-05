@@ -17,7 +17,9 @@ export default function WaitingRoom({
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 border-2 border-gray-700">
-      <h2 className="text-2xl font-bold mb-6 text-center">Waiting Room</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center pixel-text">
+        Waiting Room
+      </h2>
 
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">

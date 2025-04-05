@@ -41,6 +41,7 @@ export interface Room {
   roundStartTime: number; // Timestamp for when the current round started
   answeringTime: number; // Time in seconds for answering phase
   votingTime: number; // Time in seconds for voting phase
+  roundResult?: string; // Message about the result of the voting round
 }
 
 export interface GameState {

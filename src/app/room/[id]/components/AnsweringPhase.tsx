@@ -16,6 +16,7 @@ export default function AnsweringPhase({
 }: AnsweringPhaseProps) {
   const [answer, setAnswer] = useState("");
   const [hasAnswered, setHasAnswered] = useState(false);
+  const [showRoundResult, setShowRoundResult] = useState(false);
   const [playersAnswered, setPlayersAnswered] = useState(0);
   const currentQuestion = room.currentQuestion?.text || "Loading question...";
 
@@ -39,6 +40,17 @@ export default function AnsweringPhase({
     ).length;
 
     setPlayersAnswered(answered);
+
+    // Show round result from previous round if it exists
+    if (room.roundResult && room.currentRound > 1) {
+      setShowRoundResult(true);
+      // Hide round result after 5 seconds
+      const timer = setTimeout(() => {
+        setShowRoundResult(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
   }, [room, currentPlayer]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,6 +63,19 @@ export default function AnsweringPhase({
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 border-2 border-gray-700">
+      {/* Round result notification (if available) */}
+      {showRoundResult && (
+        <div
+          className={`p-4 mb-6 rounded-lg text-center text-lg font-bold pixel-text ${
+            room.roundResult?.includes("AI bot")
+              ? "bg-green-800/50 text-green-300"
+              : "bg-red-800/50 text-red-300"
+          }`}
+        >
+          {room.roundResult}
+        </div>
+      )}
+
       {/* Round info */}
       <div className="flex justify-between mb-6">
         <div className="bg-purple-900/50 px-4 py-2 rounded-lg">

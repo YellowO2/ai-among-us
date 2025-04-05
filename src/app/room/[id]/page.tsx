@@ -191,7 +191,7 @@ export default function RoomPage() {
     return (
       <div className="min-h-screen pixel-bg flex items-center justify-center">
         <div className="text-center pixel-card p-8 rounded-lg">
-          <div className="text-red-400 pixel-text text-xl mb-4">{error}</div>
+          <div className="text-red-400 text-xl mb-4">{error}</div>
           <button
             onClick={() => router.push("/")}
             className="px-4 py-2 rounded font-medium pixel-button"
