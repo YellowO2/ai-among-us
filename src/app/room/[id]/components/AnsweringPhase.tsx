@@ -11,7 +11,6 @@ interface AnsweringPhaseProps {
 export default function AnsweringPhase({
   room,
   currentPlayer,
-  timeLeft,
   onSubmitAnswer,
 }: AnsweringPhaseProps) {
   // Keep the answer in local state

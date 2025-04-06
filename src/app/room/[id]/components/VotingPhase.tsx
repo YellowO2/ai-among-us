@@ -11,7 +11,6 @@ interface VotingPhaseProps {
 export default function VotingPhase({
   room,
   currentPlayer,
-  timeLeft,
   onVote,
 }: VotingPhaseProps) {
   // Local state to track selected players for voting
@@ -31,7 +30,7 @@ export default function VotingPhase({
     return () => {
       isMounted.current = false;
     };
-  }, []);
+  }, [currentPlayer.votes, selectedPlayers.length]);
 
   // Update selected players when currentPlayer.votes changes
   useEffect(() => {
@@ -42,7 +41,7 @@ export default function VotingPhase({
     ) {
       setSelectedPlayers([...currentPlayer.votes]);
     }
-  }, [currentPlayer.votes]);
+  }, [currentPlayer.votes, selectedPlayers]);
 
   // Handle vote toggling with local state management
   const handleVoteToggle = (playerId: string) => {
