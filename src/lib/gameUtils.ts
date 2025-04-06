@@ -96,7 +96,7 @@ export const createRoom = async (
     maxRounds: 0, // Will be calculated when game starts
     aiCount,
     roundStartTime: 0,
-    answeringTime: 45, // Default 45 seconds for answering
+    answeringTime: 30, // Default 30 seconds for answering
     votingTime: 30, // Default 30 seconds for voting
   };
 
@@ -236,10 +236,10 @@ export const submitAnswer = async (
   if (isLastHumanToAnswer) {
     // Get all human answers for this round to use as context
     const humanAnswers = room.players
-      .filter(p => !p.isAI && !p.eliminated)
-      .flatMap(p => p.answers)
-      .filter(a => a.round === room.currentRound)
-      .map(a => a.content);
+      .filter((p) => !p.isAI && !p.eliminated)
+      .flatMap((p) => p.answers)
+      .filter((a) => a.round === room.currentRound)
+      .map((a) => a.content);
 
     // Get all AI players who need to answer
     const aiPlayers = room.players.filter(
@@ -249,7 +249,10 @@ export const submitAnswer = async (
     if (aiPlayers.length > 0) {
       // Process AI answers in parallel with human answers as context
       const aiAnswerPromises = aiPlayers.map(async (ai) => {
-        const aiResponse = await generateAIAnswer(room.currentQuestion!.text, humanAnswers);
+        const aiResponse = await generateAIAnswer(
+          room.currentQuestion!.text,
+          humanAnswers
+        );
         return {
           player: ai,
           response: aiResponse,
@@ -310,19 +313,25 @@ export const checkAndUpdateGameState = async (
     if (timeExpired) {
       // Get all human answers for this round to use as context
       const humanAnswers = room.players
-        .filter(p => !p.isAI && !p.eliminated)
-        .flatMap(p => p.answers)
-        .filter(a => a.round === room.currentRound)
-        .map(a => a.content);
-      
+        .filter((p) => !p.isAI && !p.eliminated)
+        .flatMap((p) => p.answers)
+        .filter((a) => a.round === room.currentRound)
+        .map((a) => a.content);
+
       // Make sure all AI players have answered before moving to voting
       const aiPlayersWithoutAnswers = room.players.filter(
-        (p) => p.isAI && !p.eliminated && !p.answers.some((a) => a.round === room.currentRound)
+        (p) =>
+          p.isAI &&
+          !p.eliminated &&
+          !p.answers.some((a) => a.round === room.currentRound)
       );
 
       if (aiPlayersWithoutAnswers.length > 0) {
         const aiAnswerPromises = aiPlayersWithoutAnswers.map(async (ai) => {
-          const aiResponse = await generateAIAnswer(room.currentQuestion!.text, humanAnswers);
+          const aiResponse = await generateAIAnswer(
+            room.currentQuestion!.text,
+            humanAnswers
+          );
           return {
             player: ai,
             response: aiResponse,
