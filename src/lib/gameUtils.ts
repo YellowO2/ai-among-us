@@ -202,11 +202,12 @@ export const startGame = async (roomId: string): Promise<Room | null> => {
   return room;
 };
 
-// Submit answer
+// Submit answer with updated signature to handle human answers context
 export const submitAnswer = async (
   roomId: string,
   playerId: string,
-  answer: string
+  answer: string,
+  isLastHumanToAnswer: boolean = false
 ): Promise<boolean> => {
   const roomRef = doc(db, "rooms", roomId);
   const roomSnapshot = await getDoc(roomRef);
@@ -231,34 +232,44 @@ export const submitAnswer = async (
   // Add answer to player's answers list
   room.players[playerIndex].answers.push(playerAnswer);
 
-  // If AI player, generate answer using the LLM
-  const aiPlayers = room.players.filter(
-    (p) => p.isAI && p.answers.length < room.currentRound && !p.eliminated
-  );
+  // If this is the last human to answer, collect all human answers and generate AI responses
+  if (isLastHumanToAnswer) {
+    // Get all human answers for this round to use as context
+    const humanAnswers = room.players
+      .filter(p => !p.isAI && !p.eliminated)
+      .flatMap(p => p.answers)
+      .filter(a => a.round === room.currentRound)
+      .map(a => a.content);
 
-  if (aiPlayers.length > 0) {
-    // Process AI answers in parallel
-    const aiAnswerPromises = aiPlayers.map(async (ai) => {
-      const aiResponse = await generateAIAnswer(room.currentQuestion!.text);
-      return {
-        player: ai,
-        response: aiResponse,
-      };
-    });
+    // Get all AI players who need to answer
+    const aiPlayers = room.players.filter(
+      (p) => p.isAI && p.answers.length < room.currentRound && !p.eliminated
+    );
 
-    const aiAnswers = await Promise.all(aiAnswerPromises);
+    if (aiPlayers.length > 0) {
+      // Process AI answers in parallel with human answers as context
+      const aiAnswerPromises = aiPlayers.map(async (ai) => {
+        const aiResponse = await generateAIAnswer(room.currentQuestion!.text, humanAnswers);
+        return {
+          player: ai,
+          response: aiResponse,
+        };
+      });
 
-    // Add the generated answers to the AI players
-    aiAnswers.forEach(({ player, response }) => {
-      const aiIndex = room.players.findIndex((p) => p.id === player.id);
-      if (aiIndex !== -1) {
-        room.players[aiIndex].answers.push({
-          questionId: room.currentQuestion!.id,
-          content: response,
-          round: room.currentRound,
-        });
-      }
-    });
+      const aiAnswers = await Promise.all(aiAnswerPromises);
+
+      // Add the generated answers to the AI players
+      aiAnswers.forEach(({ player, response }) => {
+        const aiIndex = room.players.findIndex((p) => p.id === player.id);
+        if (aiIndex !== -1) {
+          room.players[aiIndex].answers.push({
+            questionId: room.currentQuestion!.id,
+            content: response,
+            round: room.currentRound,
+          });
+        }
+      });
+    }
   }
 
   // Check if all players have answered
@@ -297,18 +308,21 @@ export const checkAndUpdateGameState = async (
     const timeExpired = timeElapsed >= room.answeringTime * 1000;
 
     if (timeExpired) {
+      // Get all human answers for this round to use as context
+      const humanAnswers = room.players
+        .filter(p => !p.isAI && !p.eliminated)
+        .flatMap(p => p.answers)
+        .filter(a => a.round === room.currentRound)
+        .map(a => a.content);
+      
       // Make sure all AI players have answered before moving to voting
       const aiPlayersWithoutAnswers = room.players.filter(
-        (p) =>
-          p.isAI &&
-          !p.eliminated &&
-          !p.answers.some((a) => a.round === room.currentRound)
+        (p) => p.isAI && !p.eliminated && !p.answers.some((a) => a.round === room.currentRound)
       );
 
-      // Generate answers for AI players who haven't answered yet
       if (aiPlayersWithoutAnswers.length > 0) {
         const aiAnswerPromises = aiPlayersWithoutAnswers.map(async (ai) => {
-          const aiResponse = await generateAIAnswer(room.currentQuestion!.text);
+          const aiResponse = await generateAIAnswer(room.currentQuestion!.text, humanAnswers);
           return {
             player: ai,
             response: aiResponse,

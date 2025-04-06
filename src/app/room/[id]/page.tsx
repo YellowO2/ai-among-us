@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -19,6 +19,7 @@ import AnsweringPhase from "./components/AnsweringPhase";
 import VotingPhase from "./components/VotingPhase";
 import GameResults from "./components/GameResults";
 import Timer from "./components/Timer";
+import PhaseTransition from "./components/PhaseTransition";
 
 export default function RoomPage() {
   const params = useParams();
@@ -30,6 +31,10 @@ export default function RoomPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
+  const [showTransition, setShowTransition] = useState(false);
+  const [transitionMessage, setTransitionMessage] = useState("");
+  const prevStatus = useRef<string | null>(null);
+  const prevRound = useRef<number | null>(null);
 
   // Load room data and subscribe to real-time updates
   useEffect(() => {
@@ -140,12 +145,83 @@ export default function RoomPage() {
     }
   };
 
-  // Submit player's answer
+  // Submit player's answer with phase transition
   const handleSubmitAnswer = async (answer: string) => {
     if (room && currentPlayer) {
-      await submitAnswer(roomId, currentPlayer.id, answer);
+      try {
+        // Check if this player is the last human to answer
+        const isLastHumanToAnswer = checkIfLastHumanToAnswer(
+          room,
+          currentPlayer
+        );
+
+        if (isLastHumanToAnswer) {
+          // Show transition while AI generates responses
+          setTransitionMessage("Processing answers...");
+          setShowTransition(true);
+        }
+
+        // Submit the answer
+        await submitAnswer(
+          roomId,
+          currentPlayer.id,
+          answer,
+          isLastHumanToAnswer
+        );
+
+        // If we displayed the transition, hide it after a delay
+        if (isLastHumanToAnswer) {
+          setTimeout(() => {
+            setShowTransition(false);
+          }, 2500);
+        }
+      } catch (error) {
+        console.error("Error submitting answer:", error);
+        setShowTransition(false);
+      }
     }
   };
+
+  // Check if this player is the last human to answer
+  const checkIfLastHumanToAnswer = (room: Room, player: Player): boolean => {
+    // Get all non-eliminated human players
+    const humanPlayers = room.players.filter((p) => !p.isAI && !p.eliminated);
+
+    // Count how many have already answered for this round
+    const alreadyAnswered = humanPlayers.filter(
+      (p) =>
+        p.id !== player.id && // Exclude current player
+        p.answers.some((a) => a.round === room.currentRound)
+    ).length;
+
+    // If all other humans have answered, this player is the last one
+    return alreadyAnswered === humanPlayers.length - 1;
+  };
+
+  // Add effect to handle phase transitions
+  useEffect(() => {
+    if (!room) return;
+
+    // Check for status changes
+    if (prevStatus.current && prevStatus.current !== room.status) {
+      if (room.status === "voting") {
+        setTransitionMessage("Voting phase starting...");
+        setShowTransition(true);
+        setTimeout(() => setShowTransition(false), 1500);
+      } else if (
+        room.status === "answering" &&
+        prevStatus.current === "voting"
+      ) {
+        setTransitionMessage(`Round ${room.currentRound} beginning...`);
+        setShowTransition(true);
+        setTimeout(() => setShowTransition(false), 1500);
+      }
+    }
+
+    // Update refs for next comparison
+    prevStatus.current = room.status;
+    prevRound.current = room.currentRound;
+  }, [room?.status, room?.currentRound]);
 
   // Submit player's vote
   const handleVote = async (votedPlayerId: string, add: boolean) => {
@@ -262,6 +338,9 @@ export default function RoomPage() {
 
           {/* Main Game Area */}
           <div className="pixel-border">{renderGameState()}</div>
+
+          {/* Phase transition overlay */}
+          {showTransition && <PhaseTransition message={transitionMessage} />}
         </div>
       )}
     </div>
