@@ -1,4 +1,5 @@
 import { Room, Player } from "@/types/game";
+import { playSound } from "@/lib/soundUtils";
 
 interface WaitingRoomProps {
   room: Room;
@@ -14,6 +15,17 @@ export default function WaitingRoom({
   const isHost = currentPlayer.isHost;
   const playerCount = room.players.length;
   const minimumPlayers = 2; // At least 2 real players + 1 AI
+
+  const handleStartGame = () => {
+    playSound("click");
+    onStartGame();
+  };
+
+  // Handle copy room code with sound
+  const handleCopyCode = () => {
+    playSound("click");
+    navigator.clipboard.writeText(room.code);
+  };
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 border-2 border-gray-700">
@@ -70,7 +82,7 @@ export default function WaitingRoom({
       {isHost ? (
         <div className="text-center">
           <button
-            onClick={onStartGame}
+            onClick={handleStartGame}
             disabled={playerCount < minimumPlayers}
             className={`px-6 py-3 rounded-lg font-medium text-lg transition-colors duration-200 ${
               playerCount >= minimumPlayers
@@ -95,6 +107,25 @@ export default function WaitingRoom({
           </div>
         </div>
       )}
+
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={handleCopyCode}
+          className="px-4 py-2 bg-gray-700 rounded-lg mx-2 hover:bg-gray-600"
+        >
+          Copy Code
+        </button>
+
+        {currentPlayer.isHost && (
+          <button
+            onClick={handleStartGame}
+            className="px-4 py-2 bg-blue-600 rounded-lg mx-2 hover:bg-blue-700 disabled:opacity-50"
+            disabled={room.players.length < 2}
+          >
+            Start Game
+          </button>
+        )}
+      </div>
     </div>
   );
 }

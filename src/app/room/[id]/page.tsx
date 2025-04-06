@@ -12,6 +12,8 @@ import {
   endVotingRound,
   checkAndUpdateGameState,
 } from "@/lib/gameUtils";
+import { playSound, playBackgroundMusic } from "@/lib/soundUtils";
+import SoundControl from "@/components/SoundControl";
 
 // Game Components
 import WaitingRoom from "./components/WaitingRoom";
@@ -35,6 +37,7 @@ export default function RoomPage() {
   const [transitionMessage, setTransitionMessage] = useState("");
   const prevStatus = useRef<string | null>(null);
   const prevRound = useRef<number | null>(null);
+  const soundInitialized = useRef(false);
 
   // Load room data and subscribe to real-time updates
   useEffect(() => {
@@ -89,6 +92,13 @@ export default function RoomPage() {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
 
+    // Add debug sound test in development
+    if (process.env.NODE_ENV === "development") {
+      import("@/lib/soundUtils").then(({ testSoundLoading }) => {
+        testSoundLoading();
+      });
+    }
+
     return () => {
       unsubscribe();
       clearInterval(timer);
@@ -138,17 +148,81 @@ export default function RoomPage() {
     return () => clearInterval(intervalId);
   }, [room, roomId]);
 
+  // Initialize background music immediately
+  useEffect(() => {
+    // Try to autoplay background music as soon as component mounts
+    if (!soundInitialized.current) {
+      playBackgroundMusic();
+      soundInitialized.current = true;
+    }
+
+    // Fallback for browsers with strict autoplay policies
+    const handleUserInteraction = () => {
+      if (!soundInitialized.current) {
+        playBackgroundMusic();
+        soundInitialized.current = true;
+      }
+
+      // Remove event listeners once initialized
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("keydown", handleUserInteraction);
+    };
+
+    // Add event listeners as fallback
+    document.addEventListener("click", handleUserInteraction);
+    document.addEventListener("keydown", handleUserInteraction);
+
+    return () => {
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("keydown", handleUserInteraction);
+    };
+  }, []);
+
+  // Simplify sound effects for game state changes
+  useEffect(() => {
+    if (!room || !prevStatus.current) return;
+
+    // Play sounds based on status changes
+    if (prevStatus.current !== room.status) {
+      // Only play win/lose sounds when the game ends
+      if (room.status === "ended") {
+        // Check if humans won
+        const aiPlayers = room.players.filter((p) => p.isAI);
+        const eliminatedAI = aiPlayers.filter((p) => p.eliminated);
+        const humansWon = eliminatedAI.length === aiPlayers.length;
+
+        playSound(humansWon ? "win" : "lose");
+      }
+    }
+  }, [room?.status, room]);
+
+  // Handle timer with sound effects
+  // useEffect(() => {
+  //   if (!room || timeLeft !== 10) return;
+
+  //   // Play countdown sound at 10 seconds remaining
+  //   if (
+  //     timeLeft === 10 &&
+  //     (room.status === "answering" || room.status === "voting")
+  //   ) {
+  //     playSound("timer");
+  //   }
+  // }, [timeLeft, room?.status]);
+
   // Start the game - only host can do this
   const handleStartGame = async () => {
     if (room && currentPlayer?.isHost) {
+      playSound("click");
       await startGame(roomId);
     }
   };
 
-  // Submit player's answer with phase transition
+  // Submit player's answer with click sound
   const handleSubmitAnswer = async (answer: string) => {
     if (room && currentPlayer) {
       try {
+        playSound("click");
+
         // Check if this player is the last human to answer
         const isLastHumanToAnswer = checkIfLastHumanToAnswer(
           room,
@@ -223,9 +297,10 @@ export default function RoomPage() {
     prevRound.current = room.currentRound;
   }, [room?.status, room?.currentRound, room]);
 
-  // Submit player's vote
+  // Submit player's vote with click sound
   const handleVote = async (votedPlayerId: string, add: boolean) => {
     if (room && currentPlayer) {
+      playSound("click");
       await submitVote(roomId, currentPlayer.id, votedPlayerId, add);
     }
   };
@@ -330,9 +405,16 @@ export default function RoomPage() {
               />
             )}
 
-            <div>
-              <div className="text-sm text-gray-400 pixel-text">Playing as</div>
-              <div className="font-bold pixel-text">{currentPlayer?.alias}</div>
+            <div className="flex items-center gap-4">
+              <div>
+                <div className="text-sm text-gray-400 pixel-text">
+                  Playing as
+                </div>
+                <div className="font-bold pixel-text">
+                  {currentPlayer?.alias}
+                </div>
+              </div>
+              <SoundControl />
             </div>
           </div>
 

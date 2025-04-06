@@ -1,4 +1,5 @@
 import { Room, Player } from "@/types/game";
+import { playSound } from "@/lib/soundUtils";
 
 interface GameResultsProps {
   room: Room;
@@ -21,6 +22,12 @@ export default function GameResults({
     (p) => !p.isAI && !p.eliminated
   ).length;
   const remainingAI = aiPlayers.length - eliminatedAI.length;
+
+  // Handle Play Again with sound
+  const handlePlayAgain = () => {
+    playSound("click");
+    onPlayAgain();
+  };
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 border-2 border-gray-700">
@@ -110,7 +117,7 @@ export default function GameResults({
 
       <div className="text-center">
         <button
-          onClick={onPlayAgain}
+          onClick={handlePlayAgain}
           className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium text-lg transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
         >
           Play Again
