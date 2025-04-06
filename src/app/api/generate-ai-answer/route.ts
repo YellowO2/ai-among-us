@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (humanAnswers && humanAnswers.length > 0) {
       prompt += `\n\nHere are how other humans have answered this question:`;
 
-      humanAnswers.forEach((answer, index) => {
+      humanAnswers.forEach((answer: unknown, index: number) => {
         prompt += `\nHuman ${index + 1}: "${answer}"`;
       });
 
@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
 
       // Check if answers are terse and adapt
       const terseAnswerCount = humanAnswers.filter(
-        (a) => a.length < 20 || a.includes("idk") || a.includes("don't care")
+        (a: string | string[]) =>
+          a.length < 20 || a.includes("idk") || a.includes("don't care")
       ).length;
       if (terseAnswerCount > 0) {
         prompt += ` Note that usually people reply with short or casual answers - you should try to fit in if that's what they're doing.`;

@@ -221,7 +221,7 @@ export default function RoomPage() {
     // Update refs for next comparison
     prevStatus.current = room.status;
     prevRound.current = room.currentRound;
-  }, [room?.status, room?.currentRound]);
+  }, [room?.status, room?.currentRound, room]);
 
   // Submit player's vote
   const handleVote = async (votedPlayerId: string, add: boolean) => {
