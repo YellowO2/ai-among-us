@@ -28,7 +28,6 @@ export const generateAlias = (): string => {
     "Happy",
     "Grumpy",
     "Dopey",
-    "PHD",
     "Lonely",
     "Clever",
     "Brave",
@@ -56,6 +55,7 @@ export const generateAlias = (): string => {
     "Zombie",
     "Ghost",
     "Human",
+    "Goblin",
   ];
 
   const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];

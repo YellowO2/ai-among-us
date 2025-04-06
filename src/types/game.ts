@@ -49,4 +49,6 @@ export interface GameState {
   room: Room | null;
   currentPlayer: Player | null;
   timeLeft: number;
+  currentAnswer?: string;
+  isSubmitting?: boolean;
 }

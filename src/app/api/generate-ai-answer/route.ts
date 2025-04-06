@@ -34,16 +34,7 @@ export async function POST(request: NextRequest) {
         prompt += `\nHuman ${index + 1}: "${answer}"`;
       });
 
-      prompt += `\n\nPlease provide an answer that matches the style, length, and tone of these human answers. Take note to not be strict on grammar (e.g capitalise and errors) and follow their style.`;
-
-      // Check if answers are terse and adapt
-      const terseAnswerCount = humanAnswers.filter(
-        (a: string | string[]) =>
-          a.length < 20 || a.includes("idk") || a.includes("don't care")
-      ).length;
-      if (terseAnswerCount > 0) {
-        prompt += ` Note that usually people reply with short or casual answers - you should try to fit in if that's what they're doing.`;
-      }
+      prompt += `\n\nPlease provide an answer that matches the style, length, and tone of these human answers. Take note to not be strict on grammar (e.g. no capitalise and punctuation if appropriate) and follow their style. Note that frequently people reply with short or casual answers. You should try to fit in if that's what they're doing.`;
     }
 
     prompt += `\n\nYour answer:`;

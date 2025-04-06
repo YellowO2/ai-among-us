@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Room, Player } from "@/types/game";
 
 interface AnsweringPhaseProps {
@@ -14,168 +14,117 @@ export default function AnsweringPhase({
   timeLeft,
   onSubmitAnswer,
 }: AnsweringPhaseProps) {
+  // Keep the answer in local state
   const [answer, setAnswer] = useState("");
-  const [hasAnswered, setHasAnswered] = useState(false);
-  const [showRoundResult, setShowRoundResult] = useState(false);
-  const [playersAnswered, setPlayersAnswered] = useState(0);
-  const currentQuestion = room.currentQuestion?.text || "Loading question...";
+  // Track if user has already submitted
+  const [submitted, setSubmitted] = useState(false);
+  // Use a ref to track if the component is mounted
+  const isMounted = useRef(true);
 
+  // Check if player has already answered this round
+  const hasAnswered = currentPlayer.answers.some(
+    (a) => a.round === room.currentRound
+  );
+
+  // When component mounts/unmounts
   useEffect(() => {
-    // Check if player has already answered this round
-    const playerAnswer = currentPlayer.answers.find(
-      (a) => a.round === room.currentRound
-    );
-    if (playerAnswer) {
-      setAnswer(playerAnswer.content);
-      setHasAnswered(true);
-    } else {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Reset form state when round changes
+  useEffect(() => {
+    if (isMounted.current) {
       setAnswer("");
-      setHasAnswered(false);
+      setSubmitted(hasAnswered);
     }
+  }, [room.currentRound, hasAnswered]);
 
-    // Count how many players have answered
-    const answered = room.players.filter(
-      (p) =>
-        p.answers.some((a) => a.round === room.currentRound) || p.eliminated
-    ).length;
-
-    setPlayersAnswered(answered);
-
-    // Show round result from previous round if it exists
-    if (room.roundResult && room.currentRound > 1) {
-      setShowRoundResult(true);
-      // Hide round result after 5 seconds
-      const timer = setTimeout(() => {
-        setShowRoundResult(false);
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [room, currentPlayer]);
+  // Don't reset answer when room updates for other reasons
+  // This is key to prevent losing state on each Firebase update
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasAnswered && answer.trim()) {
-      onSubmitAnswer(answer);
-      setHasAnswered(true);
+    if (!hasAnswered && answer.trim() !== "") {
+      onSubmitAnswer(answer.trim());
+      setSubmitted(true);
+      // Don't clear the answer here, let the user see what they submitted
     }
   };
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 border-2 border-gray-700">
-      {/* Round result notification (if available) */}
-      {showRoundResult && (
-        <div
-          className={`p-4 mb-6 rounded-lg text-center text-lg font-bold pixel-text ${
-            room.roundResult?.includes("AI bot")
-              ? "bg-green-800/50 text-green-300"
-              : "bg-red-800/50 text-red-300"
-          }`}
-        >
-          {room.roundResult}
-        </div>
-      )}
-
-      {/* Round info */}
-      <div className="flex justify-between mb-6">
-        <div className="bg-purple-900/50 px-4 py-2 rounded-lg">
-          <span className="font-medium">Round {room.currentRound}</span>
-          <span className="text-sm text-gray-300"> of {room.maxRounds}</span>
-        </div>
-
-        <div className="bg-blue-900/50 px-4 py-2 rounded-lg">
-          <span className="font-medium">{playersAnswered}</span>
-          <span className="text-sm text-gray-300">
-            {" "}
-            of {room.players.length} answered
-          </span>
-        </div>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold mb-2">Round {room.currentRound}</h2>
+        <p className="text-lg text-gray-300">Answer the question truthfully!</p>
       </div>
 
-      {/* Question */}
-      <div className="bg-gray-700 p-4 rounded-lg mb-6">
-        <h2 className="text-lg font-semibold mb-2">Question:</h2>
-        <p className="text-lg">{currentQuestion}</p>
+      <div className="bg-gray-700 rounded-lg p-4 mb-6">
+        <p className="text-xl">{room.currentQuestion?.text}</p>
       </div>
 
-      {/* Answer form */}
-      <form onSubmit={handleSubmit}>
-        <div className="mb-6">
-          <label
-            htmlFor="answer"
-            className="block text-sm font-medium text-gray-300 mb-2"
-          >
-            Your Answer:
-          </label>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
           <textarea
-            id="answer"
+            className="w-full h-32 p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Type your answer here..."
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            disabled={hasAnswered}
-            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:opacity-70 min-h-[120px]"
-            placeholder="Type your answer here..."
-          />
+            disabled={hasAnswered || submitted}
+            required
+          ></textarea>
         </div>
 
-        {hasAnswered ? (
-          <div className="text-center">
-            <div className="bg-green-900/40 text-green-300 p-3 rounded-lg">
-              <span className="font-medium">
-                Your answer has been submitted!
-              </span>
-              <p className="text-sm text-gray-300 mt-1">
-                Waiting for other players to answer...
-              </p>
-            </div>
-          </div>
-        ) : (
+        {!hasAnswered && !submitted ? (
           <div className="text-center">
             <button
               type="submit"
-              disabled={!answer.trim()}
-              className="px-6 py-3 bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-blue-600 transition-colors"
+              className="px-6 py-2 bg-blue-600 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+              disabled={answer.trim() === ""}
             >
               Submit Answer
             </button>
-            <p className="text-sm text-gray-400 mt-2">
-              Time remaining: {timeLeft} seconds
-            </p>
+          </div>
+        ) : (
+          <div className="text-center text-green-500">
+            Your answer has been submitted!
           </div>
         )}
-      </form>
 
-      {/* Player status */}
-      <div className="mt-8">
-        <h3 className="text-sm uppercase font-semibold text-gray-400 mb-2">
-          Players
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {room.players.map((player) => (
-            <div
-              key={player.id}
-              className={`text-center p-2 rounded-lg ${
-                player.eliminated
-                  ? "bg-red-900/30 text-gray-400"
-                  : player.answers.some((a) => a.round === room.currentRound)
-                  ? "bg-green-900/30"
-                  : "bg-gray-700"
-              }`}
-            >
-              <div className="font-medium truncate">
-                {player.alias}
-                {player.id === currentPlayer.id && " (You)"}
-              </div>
-              <div className="text-xs">
-                {player.eliminated
-                  ? "Eliminated"
-                  : player.answers.some((a) => a.round === room.currentRound)
-                  ? "Answered"
-                  : "Thinking..."}
-              </div>
-            </div>
-          ))}
+        {/* Stats about who has answered */}
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-2">Players</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {room.players
+              .filter((p) => !p.eliminated)
+              .map((player) => {
+                const playerAnswered = player.answers.some(
+                  (a) => a.round === room.currentRound
+                );
+                return (
+                  <div
+                    key={player.id}
+                    className={`flex items-center gap-2 p-2 rounded ${
+                      playerAnswered ? "bg-gray-700" : "bg-gray-800"
+                    }`}
+                  >
+                    <div
+                      className={`w-3 h-3 rounded-full ${
+                        playerAnswered ? "bg-green-500" : "bg-gray-500"
+                      }`}
+                    ></div>
+                    <span>
+                      {player.alias}
+                      {player.id === currentPlayer.id && " (You)"}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
