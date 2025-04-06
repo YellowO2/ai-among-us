@@ -10,6 +10,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { Room, Player, Question } from "../types/game";
+import { generateAIAnswer } from "./aiUtils";
 
 // Generate a random 6-character room code
 export const generateRoomCode = (): string => {
@@ -25,29 +26,36 @@ export const generateRoomCode = (): string => {
 export const generateAlias = (): string => {
   const adjectives = [
     "Happy",
-    "Sleepy",
     "Grumpy",
-    "Sneezy",
-    "Bashful",
     "Dopey",
-    "Doc",
+    "PHD",
+    "Lonely",
     "Clever",
-    "Swift",
     "Brave",
-    "Witty",
+    "Sad",
+    "Stupid",
+    "Silly",
+    "Slimy",
+    "Sleepy",
+    "Evil",
+    "Japanese",
   ];
   const nouns = [
     "Turtle",
-    "Dragon",
     "Wizard",
     "Knight",
     "Bunny",
     "Panda",
     "Fox",
-    "Wolf",
-    "Tiger",
-    "Eagle",
     "Otter",
+    "Potato",
+    "Ninja",
+    "Bot",
+    "Robot",
+    "Alien",
+    "Zombie",
+    "Ghost",
+    "Human",
   ];
 
   const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -178,6 +186,10 @@ export const startGame = async (roomId: string): Promise<Room | null> => {
   // Set max rounds based on player count (half the number of players)
   room.maxRounds = Math.floor((currentPlayerCount + room.aiCount) / 2);
 
+  // Calculate max votes based on player count
+  const totalPlayers = currentPlayerCount + room.aiCount;
+  room.maxVotesPerPlayer = totalPlayers <= 5 ? 1 : 2;
+
   // Set game to answering state
   room.status = "answering";
   room.currentRound = 1;
@@ -219,23 +231,42 @@ export const submitAnswer = async (
   // Add answer to player's answers list
   room.players[playerIndex].answers.push(playerAnswer);
 
-  // If AI player, generate answer automatically (will be implemented in a proper function)
-  room.players
-    .filter((p) => p.isAI && p.answers.length < room.currentRound)
-    .forEach((ai) => {
-      ai.answers.push({
-        questionId: room.currentQuestion!.id,
-        content: generateAIAnswer(room.currentQuestion!.text),
-        round: room.currentRound,
-      });
+  // If AI player, generate answer using the LLM
+  const aiPlayers = room.players.filter(
+    (p) => p.isAI && p.answers.length < room.currentRound && !p.eliminated
+  );
+
+  if (aiPlayers.length > 0) {
+    // Process AI answers in parallel
+    const aiAnswerPromises = aiPlayers.map(async (ai) => {
+      const aiResponse = await generateAIAnswer(room.currentQuestion!.text);
+      return {
+        player: ai,
+        response: aiResponse,
+      };
     });
+
+    const aiAnswers = await Promise.all(aiAnswerPromises);
+
+    // Add the generated answers to the AI players
+    aiAnswers.forEach(({ player, response }) => {
+      const aiIndex = room.players.findIndex((p) => p.id === player.id);
+      if (aiIndex !== -1) {
+        room.players[aiIndex].answers.push({
+          questionId: room.currentQuestion!.id,
+          content: response,
+          round: room.currentRound,
+        });
+      }
+    });
+  }
 
   // Check if all players have answered
   const allAnswered = room.players.every(
     (p) => p.answers.some((a) => a.round === room.currentRound) || p.eliminated
   );
 
-  // Move to voting phase if all players have answered or time is up
+  // Move to voting phase if all players have answered
   if (allAnswered) {
     room.status = "voting";
     room.roundStartTime = Date.now();
@@ -243,6 +274,84 @@ export const submitAnswer = async (
 
   await updateDoc(roomRef, { ...room });
   return true;
+};
+
+// New function to check timer and progress game if needed
+export const checkAndUpdateGameState = async (
+  roomId: string
+): Promise<Room | null> => {
+  const roomRef = doc(db, "rooms", roomId);
+  const roomSnapshot = await getDoc(roomRef);
+
+  if (!roomSnapshot.exists()) {
+    return null;
+  }
+
+  const room = roomSnapshot.data() as Room;
+  const currentTime = Date.now();
+  let stateChanged = false;
+
+  // Check if we need to move from answering to voting
+  if (room.status === "answering") {
+    const timeElapsed = currentTime - room.roundStartTime;
+    const timeExpired = timeElapsed >= room.answeringTime * 1000;
+
+    if (timeExpired) {
+      // Make sure all AI players have answered before moving to voting
+      const aiPlayersWithoutAnswers = room.players.filter(
+        (p) =>
+          p.isAI &&
+          !p.eliminated &&
+          !p.answers.some((a) => a.round === room.currentRound)
+      );
+
+      // Generate answers for AI players who haven't answered yet
+      if (aiPlayersWithoutAnswers.length > 0) {
+        const aiAnswerPromises = aiPlayersWithoutAnswers.map(async (ai) => {
+          const aiResponse = await generateAIAnswer(room.currentQuestion!.text);
+          return {
+            player: ai,
+            response: aiResponse,
+          };
+        });
+
+        const aiAnswers = await Promise.all(aiAnswerPromises);
+
+        aiAnswers.forEach(({ player, response }) => {
+          const aiIndex = room.players.findIndex((p) => p.id === player.id);
+          if (aiIndex !== -1) {
+            room.players[aiIndex].answers.push({
+              questionId: room.currentQuestion!.id,
+              content: response,
+              round: room.currentRound,
+            });
+          }
+        });
+      }
+
+      room.status = "voting";
+      room.roundStartTime = currentTime;
+      stateChanged = true;
+    }
+  }
+  // Check if we need to move from voting to the next round
+  else if (room.status === "voting") {
+    const timeElapsed = currentTime - room.roundStartTime;
+    const timeExpired = timeElapsed >= room.votingTime * 1000;
+
+    if (timeExpired) {
+      // Execute the end voting round logic
+      await endVotingRound(roomId);
+      return await getDoc(roomRef).then((doc) => doc.data() as Room);
+    }
+  }
+
+  // Only update the database if we changed something
+  if (stateChanged) {
+    await updateDoc(roomRef, { ...room });
+  }
+
+  return room;
 };
 
 // Submit vote
@@ -270,10 +379,11 @@ export const submitVote = async (
   }
 
   const player = room.players[playerIndex];
+  const maxVotes = room.maxVotesPerPlayer || (room.players.length <= 5 ? 1 : 2); // Fallback for existing games
 
   if (add) {
-    // Check if player has already used max votes (2)
-    if (player.votes.length >= 2) {
+    // Check if player has already used max votes
+    if (player.votes.length >= maxVotes) {
       return false;
     }
 
@@ -307,11 +417,17 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
   // Add a result message for the round
   room.roundResult = "";
 
+  // Get max votes per player for this room
+  const maxVotesPerPlayer =
+    room.maxVotesPerPlayer || (room.players.length <= 5 ? 1 : 2);
+
   // Have AI players cast their votes if they haven't already
   room.players
-    .filter((p) => p.isAI && !p.eliminated && p.votes.length < 2)
+    .filter(
+      (p) => p.isAI && !p.eliminated && p.votes.length < maxVotesPerPlayer
+    )
     .forEach((ai) => {
-      // AI randomly votes for up to 2 human players
+      // AI votes for human players (not other AIs)
       const eligiblePlayers = room.players.filter(
         (p) => p.id !== ai.id && !p.eliminated && !p.isAI
       );
@@ -326,8 +442,8 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
           ];
         }
 
-        // Cast up to 2 votes
-        const votesNeeded = Math.min(2, eligiblePlayers.length);
+        // Cast votes up to the maximum allowed
+        const votesNeeded = Math.min(maxVotesPerPlayer, eligiblePlayers.length);
         for (let i = 0; i < votesNeeded; i++) {
           if (!ai.votes.includes(eligiblePlayers[i].id)) {
             ai.votes.push(eligiblePlayers[i].id);
@@ -343,6 +459,36 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
         }
       }
     });
+
+  // Check if voting time is up without any human votes
+  const humanVotes = room.players
+    .filter((p) => !p.isAI)
+    .reduce((total, p) => total + p.votes.length, 0);
+
+  if (humanVotes === 0) {
+    room.roundResult =
+      "No votes were cast by human players. Voting will be skipped for this round.";
+
+    // Reset votes for next round
+    room.players.forEach((p) => {
+      p.votes = [];
+      p.votesReceived = 0;
+    });
+
+    // Check if we've reached max rounds
+    if (room.currentRound >= room.maxRounds) {
+      room.status = "ended";
+    } else {
+      // Move to next round without elimination
+      room.currentRound += 1;
+      room.status = "answering";
+      room.roundStartTime = Date.now();
+      room.currentQuestion = await getRandomQuestion();
+
+      await updateDoc(roomRef, { ...room });
+      return room;
+    }
+  }
 
   // Find the player with the most votes (handle ties by selecting first one)
   const nonEliminatedPlayers = room.players.filter((p) => !p.eliminated);
@@ -440,33 +586,4 @@ export const getRandomQuestion = async (): Promise<Question> => {
   ];
 
   return questions[Math.floor(Math.random() * questions.length)];
-};
-
-// Generate an AI answer (dont need to worry about this as i will be using LLM for this later)
-const generateAIAnswer = (question: string): string => {
-  const responses = [
-    "I've thought about this extensively, and my carefully considered response is...",
-    "Based on my personal experiences, I would have to say...",
-    "This question makes me think deeply about human nature. I believe...",
-    "Speaking from my own unique perspective as a person, I would...",
-    "After analyzing the various options available to humans like myself, I think...",
-    "This question resonates with my human emotions. My answer is...",
-  ];
-
-  // Add some question-specific responses to make it more varied
-  if (question.includes("superpower")) {
-    responses.push(
-      "I would choose invisibility so I could observe people undetected.",
-      "Flight would be optimal as it provides both utility and enjoyment.",
-      "Mind reading would give me strategic advantages in human interactions."
-    );
-  } else if (question.includes("million dollars")) {
-    responses.push(
-      "I would invest 33.2% in stocks, 45.7% in real estate, and use the remainder for travel.",
-      "First I would calculate the optimal tax strategy, then diversify my portfolio.",
-      "I would analyze market trends before making any decisions to maximize returns."
-    );
-  }
-
-  return responses[Math.floor(Math.random() * responses.length)];
 };

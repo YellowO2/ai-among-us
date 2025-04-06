@@ -42,6 +42,7 @@ export interface Room {
   answeringTime: number; // Time in seconds for answering phase
   votingTime: number; // Time in seconds for voting phase
   roundResult?: string; // Message about the result of the voting round
+  maxVotesPerPlayer?: number; // Number of votes each player gets (1 for ≤5 players, 2 for >5)
 }
 
 export interface GameState {

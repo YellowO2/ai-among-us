@@ -10,6 +10,7 @@ import {
   submitAnswer,
   submitVote,
   endVotingRound,
+  checkAndUpdateGameState,
 } from "@/lib/gameUtils";
 
 // Game Components
@@ -109,6 +110,28 @@ export default function RoomPage() {
       }
     }
   }, [timeLeft, room, currentPlayer, roomId]);
+
+  // Add a timer effect to check game state periodically
+  useEffect(() => {
+    if (!room || room.status === "waiting" || room.status === "ended") {
+      return; // Don't run timer if game hasn't started or is already over
+    }
+
+    // Check every 3 seconds if the timer has expired
+    const intervalId = setInterval(async () => {
+      const updatedRoom = await checkAndUpdateGameState(roomId);
+      if (
+        updatedRoom &&
+        (updatedRoom.status !== room.status ||
+          updatedRoom.currentRound !== room.currentRound)
+      ) {
+        setRoom(updatedRoom);
+      }
+    }, 3000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
+  }, [room, roomId]);
 
   // Start the game - only host can do this
   const handleStartGame = async () => {
