@@ -97,7 +97,7 @@ export const createRoom = async (
     maxRounds: 0, // Will be calculated when game starts
     aiCount,
     roundStartTime: 0,
-    answeringTime: 30, // Default 30 seconds for answering
+    answeringTime: 35, // Default 30 seconds for answering
     votingTime: 30, // Default 30 seconds for voting
   };
 
@@ -194,6 +194,9 @@ export const startGame = async (roomId: string): Promise<Room | null> => {
 
   // Set max rounds based on player count (half the number of players)
   room.maxRounds = Math.floor((currentPlayerCount + room.aiCount) / 2);
+
+  //replace max round with 5 currently due to time constraints
+  room.maxRounds = 5;
 
   // Calculate max votes based on player count
   const totalPlayers = currentPlayerCount + room.aiCount;
