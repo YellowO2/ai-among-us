@@ -16,25 +16,29 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
     // Get the generative model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash-thinking-exp-01-21",
+      generationConfig: {
+        temperature: 1.3,
+        topK: 40,
+        topP: 0.96,
+      },
+    });
 
     // Build the prompt with human answers as context
     let prompt = `
-      You are playing a game where you need to pretend to be human and answer the following question. 
-      Your goal is to make your answer as believable as possible that it was written by a real person. Keep your answers short.
-      
-      Question: ${question}
+      You are playing a game where you need to pretend to be human and produce something that seems like what the other humans would say. Keep your answers short.
     `;
 
     // Add human answers as context if available
     if (humanAnswers && humanAnswers.length > 0) {
-      prompt += `\n\nHere are how other humans have answered this question:`;
+      prompt += `\n\nHere are how other people have answered this question:`;
 
       humanAnswers.forEach((answer: unknown, index: number) => {
         prompt += `\nHuman ${index + 1}: "${answer}"`;
       });
 
-      prompt += `\n\nPlease provide an answer that matches the style, length, and tone of these human answers. Take note to not be strict on grammar (e.g. no capitalise and punctuation if appropriate) and follow their style. Note that frequently people reply with short or casual answers. You should try to fit in if that's what they're doing.`;
+      prompt += `\n\nPlease provide an answer that matches the style, length, and tone of these human answers. Take note to not be strict on grammar (e.g. no capitalise and punctuation if appropriate) and follow their style. Note that frequently people reply with short or casual answers. Basically, you should try to fit in to their writting style.`;
     }
 
     prompt += `\n\nYour answer:`;
