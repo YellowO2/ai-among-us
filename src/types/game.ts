@@ -14,6 +14,7 @@ export interface Player {
   answers: Answer[];
   votes: string[]; // IDs of players they voted for in current round
   votesReceived: number; // Number of votes received in current round
+  totalVotesReceived: number; // Total votes received across all rounds
   eliminated: boolean;
 }
 
@@ -43,6 +44,8 @@ export interface Room {
   votingTime: number; // Time in seconds for voting phase
   roundResult?: string; // Message about the result of the voting round
   maxVotesPerPlayer?: number; // Number of votes each player gets (1 for ≤5 players, 2 for >5)
+  humansWon?: boolean; // Whether humans won (determined at game end)
+  gameResult?: string; // Final result message
 }
 
 export interface GameState {

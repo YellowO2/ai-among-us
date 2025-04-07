@@ -84,6 +84,7 @@ export const createRoom = async (
     votes: [],
     votesReceived: 0,
     eliminated: false,
+    totalVotesReceived: 0,
   };
 
   const room: Room = {
@@ -136,6 +137,7 @@ export const joinRoom = async (
     votes: [],
     votesReceived: 0,
     eliminated: false,
+    totalVotesReceived: 0,
   };
 
   room.players.push(player);
@@ -156,6 +158,12 @@ export const startGame = async (roomId: string): Promise<Room | null> => {
 
   // Add AI players based on aiCount
   const currentPlayerCount = room.players.length;
+
+  // Initialize totalVotesReceived for existing players
+  room.players.forEach((player) => {
+    player.totalVotesReceived = 0;
+  });
+
   for (let i = 0; i < room.aiCount; i++) {
     const aiPlayer: Player = {
       id: `ai_${Date.now()}_${i}`,
@@ -166,6 +174,7 @@ export const startGame = async (roomId: string): Promise<Room | null> => {
       answers: [],
       votes: [],
       votesReceived: 0,
+      totalVotesReceived: 0,
       eliminated: false,
     };
     room.players.push(aiPlayer);
@@ -457,77 +466,103 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
 
     // Check if we've reached max rounds
     if (room.currentRound >= room.maxRounds) {
-      room.status = "ended";
+      // Game has ended, determine the winner
+      determineGameWinner(room);
     } else {
       // Move to next round without elimination
       room.currentRound += 1;
       room.status = "answering";
       room.roundStartTime = Date.now();
       room.currentQuestion = await getRandomQuestion();
-
-      await updateDoc(roomRef, { ...room });
-      return room;
     }
-  }
-
-  // Find the player with the most votes (handle ties by selecting first one)
-  const nonEliminatedPlayers = room.players.filter((p) => !p.eliminated);
-  const maxVotes = Math.max(
-    ...nonEliminatedPlayers.map((p) => p.votesReceived)
-  );
-
-  // Only proceed if at least one vote was cast
-  if (maxVotes > 0) {
-    // Get all players with the highest votes
-    const playersWithMaxVotes = nonEliminatedPlayers.filter(
-      (p) => p.votesReceived === maxVotes
+  } else {
+    // Find the player with the most votes (handle ties by selecting first one)
+    const nonEliminatedPlayers = room.players.filter((p) => !p.eliminated);
+    const maxVotes = Math.max(
+      ...nonEliminatedPlayers.map((p) => p.votesReceived)
     );
 
-    // Select first player with max votes (tiebreaker)
-    const selectedPlayer = playersWithMaxVotes[0];
+    // Only proceed if at least one vote was cast
+    if (maxVotes > 0) {
+      // Get all players with the highest votes
+      const playersWithMaxVotes = nonEliminatedPlayers.filter(
+        (p) => p.votesReceived === maxVotes
+      );
 
-    if (selectedPlayer) {
-      if (selectedPlayer.isAI) {
-        // If AI, eliminate them
-        const idx = room.players.findIndex((p) => p.id === selectedPlayer.id);
-        if (idx !== -1) {
-          room.players[idx].eliminated = true;
-          room.roundResult = `${selectedPlayer.alias} was eliminated! They were an AI bot.`;
+      // Select first player with max votes (tiebreaker)
+      const selectedPlayer = playersWithMaxVotes[0];
+
+      if (selectedPlayer) {
+        // Update total votes received for each player
+        room.players.forEach((player) => {
+          if (typeof player.totalVotesReceived === "undefined") {
+            player.totalVotesReceived = player.votesReceived;
+          } else {
+            player.totalVotesReceived += player.votesReceived;
+          }
+        });
+
+        if (selectedPlayer.isAI) {
+          room.roundResult = `${selectedPlayer.alias} received the most votes and is an AI bot!`;
+        } else {
+          room.roundResult = `${selectedPlayer.alias} received the most votes but is a human!`;
         }
-      } else {
-        // If human, don't eliminate them
-        room.roundResult = `${selectedPlayer.alias} received the most votes but was human! No one was eliminated.`;
       }
+    } else {
+      room.roundResult = "No votes were cast. No players were identified.";
     }
-  } else {
-    room.roundResult = "No votes were cast. No one was eliminated.";
-  }
 
-  // Check if all AI players have been eliminated
-  const allAIEliminated = room.players
-    .filter((p) => p.isAI)
-    .every((p) => p.eliminated);
+    // Check if this was the final round
+    if (room.currentRound >= room.maxRounds) {
+      // Game has ended, determine the winner
+      determineGameWinner(room);
+    } else {
+      // Reset votes for next round
+      room.players.forEach((p) => {
+        p.votes = [];
+        p.votesReceived = 0;
+      });
 
-  // Check if game should end
-  if (allAIEliminated || room.currentRound >= room.maxRounds) {
-    room.status = "ended";
-  } else {
-    // Reset votes for next round
-    room.players.forEach((p) => {
-      p.votes = [];
-      p.votesReceived = 0;
-    });
-
-    // Move to next round
-    room.currentRound += 1;
-    room.status = "answering";
-    room.roundStartTime = Date.now();
-    room.currentQuestion = await getRandomQuestion();
+      // Move to next round
+      room.currentRound += 1;
+      room.status = "answering";
+      room.roundStartTime = Date.now();
+      room.currentQuestion = await getRandomQuestion();
+    }
   }
 
   await updateDoc(roomRef, { ...room });
   return room;
 };
+
+// Helper function to determine game winner at the end
+function determineGameWinner(room: Room) {
+  room.status = "ended";
+
+  // Sort players by total votes received (highest to lowest)
+  const sortedPlayers = [...room.players].sort(
+    (a, b) => (b.totalVotesReceived || 0) - (a.totalVotesReceived || 0)
+  );
+
+  // Get the top N players where N is the number of AI players
+  const topPlayers = sortedPlayers.slice(0, room.aiCount);
+
+  // Count how many of the top N voted players are actually AI
+  const aiInTopN = topPlayers.filter((p) => p.isAI).length;
+
+  // If all top N players are AI, humans win
+  if (aiInTopN === room.aiCount) {
+    room.humansWon = true;
+    room.gameResult = "Humans win! All AI bots were correctly identified!";
+  } else {
+    room.humansWon = false;
+    if (aiInTopN === 0) {
+      room.gameResult = "AI wins! None of the AI bots were identified!";
+    } else {
+      room.gameResult = `AI wins! Only ${aiInTopN} out of ${room.aiCount} AI bots were identified.`;
+    }
+  }
+}
 
 // Get a random question from the database
 export const getRandomQuestion = async (): Promise<Question> => {
