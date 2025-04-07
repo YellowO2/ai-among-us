@@ -440,50 +440,7 @@ export const endVotingRound = async (roomId: string): Promise<Room | null> => {
   // Add a result message for the round
   room.roundResult = "";
 
-  // Get max votes per player for this room
-  const maxVotesPerPlayer =
-    room.maxVotesPerPlayer || (room.players.length <= 5 ? 1 : 2);
-
-  // Have AI players cast their votes if they haven't already
-  room.players
-    .filter(
-      (p) => p.isAI && !p.eliminated && p.votes.length < maxVotesPerPlayer
-    )
-    .forEach((ai) => {
-      // AI votes for human players (not other AIs)
-      const eligiblePlayers = room.players.filter(
-        (p) => p.id !== ai.id && !p.eliminated && !p.isAI
-      );
-
-      if (eligiblePlayers.length > 0) {
-        // Shuffle eligible players
-        for (let i = eligiblePlayers.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [eligiblePlayers[i], eligiblePlayers[j]] = [
-            eligiblePlayers[j],
-            eligiblePlayers[i],
-          ];
-        }
-
-        // Cast votes up to the maximum allowed
-        const votesNeeded = Math.min(maxVotesPerPlayer, eligiblePlayers.length);
-        for (let i = 0; i < votesNeeded; i++) {
-          if (!ai.votes.includes(eligiblePlayers[i].id)) {
-            ai.votes.push(eligiblePlayers[i].id);
-
-            // Find the player in the room and increment their votes received
-            const votedPlayerIndex = room.players.findIndex(
-              (p) => p.id === eligiblePlayers[i].id
-            );
-            if (votedPlayerIndex !== -1) {
-              room.players[votedPlayerIndex].votesReceived += 1;
-            }
-          }
-        }
-      }
-    });
-
-  // Check if voting time is up without any human votes
+  // Check if there were any human votes
   const humanVotes = room.players
     .filter((p) => !p.isAI)
     .reduce((total, p) => total + p.votes.length, 0);
