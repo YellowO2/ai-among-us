@@ -64,12 +64,34 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pixel-bg flex flex-col items-center justify-center p-4 text-white">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 text-yellow-400 tracking-wide pixel-text">
+      {/* Floating particles */}
+      <div
+        className="floating-particle"
+        style={{ top: "10%", left: "10%" }}
+      ></div>
+      <div
+        className="floating-particle"
+        style={{ top: "20%", right: "15%" }}
+      ></div>
+      <div
+        className="floating-particle"
+        style={{ bottom: "30%", left: "20%" }}
+      ></div>
+      <div
+        className="floating-particle"
+        style={{ top: "60%", right: "25%" }}
+      ></div>
+      <div
+        className="floating-particle"
+        style={{ bottom: "20%", right: "10%" }}
+      ></div>
+
+      <div className="w-full max-w-md fade-in-up">
+        <div className="text-center mb-8 fade-in-up">
+          <h1 className="text-4xl font-bold mb-2 text-yellow-400 tracking-wide pixel-text title-glow">
             FIND THE FAKE HUMAN
           </h1>
-          <p className="text-lg text-gray-300 pixel-text">
+          <p className="text-lg text-gray-300 pixel-text fade-in-up">
             Can you spot the AI among us?
           </p>
         </div>
@@ -78,7 +100,7 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             <button
               onClick={() => setView("create")}
-              className="px-6 py-3 rounded-lg font-medium text-lg transition-colors duration-200 pixel-button"
+              className="px-6 py-3 rounded-lg font-medium text-lg transition-colors duration-200 pixel-button fade-in-up"
             >
               Create Game
             </button>
@@ -240,7 +262,7 @@ export default function Home() {
           </form>
         )}
 
-        <div className="mt-12 text-center text-gray-400 text-sm pixel-text">
+        <div className="mt-12 text-center text-gray-400 text-sm pixel-text fade-in-up">
           <p>A game of deception and deduction</p>
           <p className="mt-1">Find the AI before time runs out!</p>
         </div>

@@ -1,10 +1,6 @@
 # AI Among Us
-
-A web-based multiplayer deduction game where players try to find the AI bots among the real players.
-
-## Game Overview
-
-"AI Among Us" is similar to social deduction games like Werewolf, but the "werewolves" are AI bots. Players must carefully analyze everyone's answers to questions and try to identify which players are not human.
+A web-based real-time multiplayer social deduction game, where players must identify the AI bots hiding among them.
+[Check Out Live Demo Here!](https://ai-among-us-eight.vercel.app/)
 
 ### How to Play
 
