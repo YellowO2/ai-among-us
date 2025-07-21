@@ -2,27 +2,36 @@
 A web-based real-time multiplayer social deduction game, where players must identify the AI bots hiding among them.
 [Check Out Live Demo Here!](https://ai-among-us-eight.vercel.app/)
 
-### How to Play
+## Gameplay
 
-1. **Create a Game**: Start by creating a room and choosing how many AI bots to include.
-2. **Join a Game**: Players join using a room code (similar to Kahoot).
-3. **Start the Game**: The host starts the game when ready.
-4. **Answer Questions**: Each round, players answer a random question within the time limit.
-5. **Vote**: After everyone has answered, players vote for who they think is an AI bot (max 2 votes per round).
-6. **Elimination**: The player(s) with the most votes get eliminated.
-7. **Game End**: The game continues until all AI bots are eliminated (humans win) or the maximum number of rounds is reached (AI wins).
+1. **Create a Room and invite friends**:
+![Create room](./.github/assets/create_room.png)
 
-## Built With
+2. **Answer questions and vote**:
+![Answer questions](./.github/assets/answer_questions.png)
+![Answer questions](./.github/assets/vote.png)
 
-- [Next.js](https://nextjs.org/) - The React framework
-- [Firebase/Firestore](https://firebase.google.com/) - Real-time database
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- Pixel art styling inspired by games like Undertale
+3. **Game End**: 
+If a real person is voted as ai, the humans lose!
+![Game over](./.github/assets/game_over.png)
 
-## Future Enhancements
+## Tech Stack
+*   **Next.js (React):** Used to build the user interface and overall structure.
+*   **Firebase/Firestore:** Handled real-time data synchronization for game state, players, and votes.
+*   **Vercel:** For hosting.
 
-- Add sound effects and background music
-- Implement more sophisticated AI responses
-- Add spectator mode
-- Create persistent user accounts and statistics
-- Add more question categories
+## Challenges & Learnings
+The main challenge was managing real-time data from Firebase without disrupting the user experience. When new data arrived from the backend (like a new vote count), the UI would re-render and wipe out any text a player was typing in an input field.
+The fix was to separate the two types of data. I used React's local state to manage the user's input directly on the page, while the real-time data from Firebase updated other parts of the component. This way, the live game data wouldn't override what a user was actively doing.
+This project was a great lesson in the complexities of real time multiplayer state management(harder then i thought), and the need to separating server state from local UI state. Those two cannot be shared, at least when using firebase + react, I think.
+
+## Running Locally
+```bash
+git clone https://github.com/YellowO2/ai-among-us.git
+
+cd ai-among-us
+
+npm install
+
+npm run dev
+```

@@ -115,16 +115,6 @@ export default function WaitingRoom({
         >
           Copy Code
         </button>
-
-        {currentPlayer.isHost && (
-          <button
-            onClick={handleStartGame}
-            className="px-4 py-2 bg-blue-600 rounded-lg mx-2 hover:bg-blue-700 disabled:opacity-50"
-            disabled={room.players.length < 2}
-          >
-            Start Game
-          </button>
-        )}
       </div>
     </div>
   );
